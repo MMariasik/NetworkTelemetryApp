@@ -12,24 +12,32 @@ def getInterfaceFromUser():
     for interface in get_if_list():
         print(f"{interface}, with addr: {get_if_addr(interface)}")
 
-    print("Provide network interface ", end="")
+    print("Provide network interface for SNMP ", end="")
     while(True):
-        interface = input("[virbr0]: ") or "virbr0"
-        if interface not in get_if_list():
-            print(f"Error: Interface \"{interface}\" does not exist, try again: ", end="")
+        interface_SNMP = input("[virbr0]: ") or "virbr0"
+        if interface_SNMP not in get_if_list():
+            print(f"Error: Interface \"{interface_SNMP}\" does not exist, try again: ", end="")
         else:
             break
-    
-    return interface
+
+    print("Provide network interface for Port Mirroring ", end="")
+    while(True):
+        interface_PM = input("[virbr0]: ") or "tap-span"
+        if interface_PM not in get_if_list():
+            print(f"Error: Interface \"{interface_PM}\" does not exist, try again: ", end="")
+        else:
+            break
+
+    return interface_SNMP, interface_PM
 
 
 try:
-    interface = getInterfaceFromUser()
+    interface_SNMP, interface_PM = getInterfaceFromUser()
     
-    #mySniffer = MySnifferClass.MySniffer(interface)
-    devices = SubnetScanner.scanForDevices(interface)
-    SubnetScanner.printDevices(devices)
-    SubnetScanner.getMoreInfo(devices)
+    mySniffer = MySnifferClass.MySniffer(interface_PM)
+    #devices = SubnetScanner.scanForDevices(interface_SNMP)
+    #SubnetScanner.printDevices(devices)
+    #SubnetScanner.getMoreInfo(devices)
 
     while(True):
         print("test3")
