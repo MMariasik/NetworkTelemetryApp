@@ -2,7 +2,6 @@ from scapy.all import ARP, Ether, srp
 import netifaces
 import socket
 import netaddr
-import nmap
 
 def check_interface_families(interface):
     try:
@@ -34,6 +33,7 @@ def check_interface_families(interface):
 
 
 def scanForDevices(interface):
+    print("[*] Rozpoczynam jednorazowe skanowanie sieci...")
     status = check_interface_families(interface)
     clients = []
 
@@ -54,6 +54,7 @@ def scanForDevices(interface):
             else:
                 print(f"Skipping {ip_addr} - network {network_cidr} already scanned.")
 
+    print(f"[*] Zakończono skanowanie sieci. Znaleziono {len(clients)} urządzeń.")
     return clients
 
 def ARPscan(interface, ip_addr, netmask):
@@ -83,19 +84,3 @@ def printDevices(devices):
     print("IP" + " "*18+"MAC")
     for client in devices:
         print("{:16}    {}".format(client['ip'], client['mac']))
-
-def getMoreInfo(devices):
-    for client in devices:
-        nm = nmap.PortScanner()
-        ip = client['ip']
-        nm.scan(ip, arguments='-O')
-
-        if ip in nm.all_hosts():
-            os_matches = nm[ip].get('osmatch', [])
-            if os_matches:
-                for match in os_matches:
-                    print(f"OS Guess for {ip}: {match['name']} ({match['accuracy']}%)")
-            else:
-                print(f"No OS fingerprint matches found for {ip}.")
-        else:
-            print(f"Host {ip} appeared down during the OS scan.")

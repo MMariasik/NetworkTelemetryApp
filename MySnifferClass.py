@@ -1,7 +1,10 @@
-from scapy.all import sniff, IP, TCP, UDP, ICMP, AsyncSniffer
+from scapy.all import sniff, IP, TCP, UDP, ICMP, Ether, AsyncSniffer, raw
+from db_tools import store_packet_in_db
 
 class MySniffer:
-    def __init__(self, interface):
+    def __init__(self, interface, cursor, db):
+        self.cursor = cursor
+        self.db = db
         self.sniffer = AsyncSniffer(
             iface=interface, 
             prn=self.detailed_callback, 
@@ -14,27 +17,43 @@ class MySniffer:
         self.sniffer.stop()
 
     def detailed_callback(self, packet):
-        PODSLUCH = False  # Set to False to disable detailed output (for cleaner console)
-        if PODSLUCH:
-            print("-" * 50)
-            # 1. Print the high-level summary (e.g., "Ether / IP / TCP 1.1.1.1:80 > 2.2.2.2:54321 S")
-            print(f"SUMMARY: {packet.summary()}")
+        src_mac = None
+        dst_mac = None
+        src_ip = None
+        dst_ip = None
+        protocol = None
+        src_port = None
+        dst_port = None
+        packet_size = len(packet) 
+        payload = None
 
-            # 2. Check for specific layers and extract data
-            if packet.haslayer(IP):
-                ip_layer = packet.getlayer(IP)
-                print(f"SRC IP: {ip_layer.src} | DST IP: {ip_layer.dst} | TTL: {ip_layer.ttl}")
+        if hasattr(packet, "src") and hasattr(packet, "dst"):
+            src_mac = packet.src
+            dst_mac = packet.dst
 
-            if packet.haslayer(TCP):
-                tcp_layer = packet.getlayer(TCP)
-                print(f"Type: TCP | Port: {tcp_layer.sport} -> {tcp_layer.dport} | Flags: {tcp_layer.flags}")
+        if packet.haslayer(IP):
+            src_ip = packet[IP].src
+            dst_ip = packet[IP].dst
+            protocol = "IP" 
 
-            if packet.haslayer(UDP):
-                udp_layer = packet.getlayer(UDP)
-                print(f"Type: UDP | Port: {udp_layer.sport} -> {udp_layer.dport} | Len: {udp_layer.len}")
+        if packet.haslayer(TCP):
+            protocol = "TCP"
+            src_port = packet[TCP].sport
+            dst_port = packet[TCP].dport
+        elif packet.haslayer(UDP):
+            protocol = "UDP"
+            src_port = packet[UDP].sport
+            dst_port = packet[UDP].dport
+        elif packet.haslayer(ICMP):
+            protocol = "ICMP"
+            # ICMP nie ma portów, zostaną jako None (w bazie jako NULL)
 
-            if packet.haslayer(ICMP):
-                print("Type: ICMP (Ping)")
+        if packet.haslayer(IP) and packet[IP].payload:
+            # raw() zamienia payload na obiekt typu bytes
+            payload = raw(packet[IP].payload)
 
-            # 3. UNCOMMENT the line below if you want to see EVERYTHING (huge output)
-            packet.show() 
+        self.save_to_db(src_mac, dst_mac, src_ip, dst_ip, protocol, src_port, dst_port, packet_size, payload, packet.time)
+
+    def save_to_db(self, src_mac, dst_mac, src_ip, dst_ip, protocol, src_port, dst_port, packet_size, payload, timestamp):
+        values = (timestamp, src_mac, dst_mac, src_ip, dst_ip, protocol, src_port, dst_port, packet_size, payload)
+        store_packet_in_db(self.db, self.cursor, values)

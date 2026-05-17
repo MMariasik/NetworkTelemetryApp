@@ -4,7 +4,9 @@ import asyncio
 
 import MySnifferClass
 import SubnetScanner
+from PollerManager import PollerManager
 from SnmpPoller import AsyncSNMPPoller
+from db_tools import connect_to_db
 
 monitored_devices = {}
 
@@ -35,38 +37,21 @@ def getInterfaceFromUser():
 
 
 async def start_app():
+    db, cursor = connect_to_db()
+
     interface_SNMP, interface_PM = getInterfaceFromUser()
     
-    mySniffer = MySnifferClass.MySniffer(interface_PM)
+    mySniffer = MySnifferClass.MySniffer(interface_PM, cursor, db)
     poller = AsyncSNMPPoller()
 
-    print("[*] Rozpoczynam jednorazowe skanowanie sieci...")
     raw_hosts = SubnetScanner.scanForDevices(interface_SNMP) # ARP Scan
-    print(f"[*] Zakończono skanowanie sieci. Znaleziono {len(raw_hosts)} urządzeń.")
+    monitored_devices = await PollerManager().poll_devices(poller, raw_hosts)
 
-    # Równoległe sprawdzanie SNMP dla wszystkich znalezionych po ARP
-    discovery_tasks = [poller.get_device_identity(host['ip']) for host in raw_hosts]
-    discovered_data = await asyncio.gather(*discovery_tasks)
-    print("znalezione dane:")
-    for data in discovered_data:
-        print(f"  - {data}")
-
-    for data in discovered_data:
-        if data['status'] == 'up':
-            monitored_devices[data['ip']] = data
-            print(f"[+] Dodano do monitoringu: {data['ip']} [{data['vendor']}]")
-        else:
-            print(f"[-] Urządzenie {data['ip']} jest niedostępne (status: {data['status']})")
-
+    # pętla główna programu
     while True:
         print("test3")
         await asyncio.sleep(30) # Interwał odpytywania
-        for data in monitored_devices.values():
-            metrics = await poller.get_device_metrics(data)
-            if metrics:
-                print(f"  - Metryki dla {data['ip']}: {metrics}")
-            else:
-                print(f"  - Nie można pobrać metryk dla {data['ip']}")
+        await PollerManager().poll_metrics(poller)
 
 if __name__ == "__main__":
     try:
