@@ -79,17 +79,21 @@ class AsyncSNMPPoller:
     def __init__(self, communities=['public', 'cisco', 'admin'], port=161, timeout=2, retries=1):
         self.communities = communities
         self.port = port
-        self.timeout = timeout  # <--- TO BYŁO BRAKUJĄCE OGNIWO
-        self.retries = retries  # <--- I TO RÓWNIEŻ
+        self.timeout = timeout
+        self.retries = retries
         self.engine = SnmpEngine()
-        self.auth_cache = {}
+        self.auth_cache = {}  # Keszuje: {ip: {"community": str, "transport": UdpTransportTarget}}
 
     async def get_device_identity(self, ip):
-        """Jednorazowe pobranie tożsamości (Discovery)."""
+        """Jednorazowe pobranie tożsamości (Discovery) i inicjalizacja transportu."""
         for community in self.communities:
             response = await self._try_query(ip, community)
             if response:
-                self.auth_cache[ip] = community
+                # Zapamiętujemy parametry autoryzacji i reużywamy obiekt transportu
+                self.auth_cache[ip] = {
+                    'community': community,
+                    'transport': response['transport']
+                }
                 vendor = self._identify_vendor(response['sysDescr'])
                 return {
                     'ip': ip,
@@ -101,38 +105,8 @@ class AsyncSNMPPoller:
                 }
         return {'ip': ip, 'status': 'down'}
 
-    async def fetch_metrics(self, ip, vendor, community):
-        """Pobiera metryki wydajnościowe dla konkretnego urządzenia."""
-        vendor_metrics = OIDS["performance"].get(vendor, OIDS["performance"].get("Generic/Unknown", {}))
-        if not vendor_metrics: return None
-
-        query_objects = [ObjectType(ObjectIdentity(oid)) for oid in vendor_metrics.values()]
-        
-        try:
-            transport = await UdpTransportTarget.create((ip, self.port), timeout=1, retries=0)
-            errInd, errStat, errIdx, varBinds = await get_cmd(
-                self.engine,
-                CommunityData(community, mpModel=1),
-                transport,
-                ContextData(),
-                *query_objects
-            )
-
-            if not errInd and not errStat:
-                metric_names = list(vendor_metrics.keys())
-                return {metric_names[i]: varBinds[i][1].prettyPrint() for i in range(len(varBinds))}
-        except Exception:
-            return None
-
-    def _identify_vendor(self, description):
-        """Prywatna metoda do fingerprintingu urządzenia."""
-        for key, name in VENDOR_MAP.items():
-            if key.lower() in description.lower():
-                return name
-        return "Generic/Unknown"
-
     async def _try_query(self, ip, community):
-        """Pojedyncza próba Discovery z użyciem poprawnej ścieżki OID."""
+        """Pojedyncza próba Discovery."""
         try:
             transport = await UdpTransportTarget.create(
                 (ip, self.port), 
@@ -140,7 +114,6 @@ class AsyncSNMPPoller:
                 retries=self.retries
             )
             
-            # Pobieramy dane z sekcji "base" Twojego słownika
             errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
                 self.engine,
                 CommunityData(community, mpModel=1),
@@ -152,36 +125,42 @@ class AsyncSNMPPoller:
 
             if not errorIndication and not errorStatus:
                 return {
-                    'status': 'up',
-                    'community': community,
+                    'transport': transport,
                     'sysName': str(varBinds[0][1]),
                     'sysDescr': str(varBinds[1][1])
                 }
         except Exception as e:
-            print(f"[DEBUG-INTERNAL] Błąd komunikacji z {ip}: {e}")
+            # W produkcji zamień na lekki logger, print blokuje I/O przy wysokim PPS
+            pass
         return None
 
     async def get_device_metrics(self, device_data):
-        """Pobiera metryki z sekcji 'performance' na podstawie wykrytego vendora."""
+        """Pobiera metryki wydajnościowe na podstawie zidentyfikowanego dostawcy."""
         if not device_data or device_data.get('status') != 'up':
             return None
 
         ip = device_data['ip']
         vendor = device_data['vendor']
-        community = device_data['community']
         
-        # Nawigacja po Twoim słowniku: OIDS -> performance -> [Vendor Name]
         vendor_metrics = OIDS["performance"].get(vendor)
-        
         if not vendor_metrics:
-            # Logujemy brak wsparcia dla vendora, abyś wiedział, co dopisać do słownika
             print(f"[!] Brak definicji metryk performance dla vendora: {vendor}")
             return None
 
         query_objects = [ObjectType(ObjectIdentity(oid)) for oid in vendor_metrics.values()]
         
+        # Reużywamy transport i community z cache, jeśli istnieją
+        if ip in self.auth_cache:
+            transport = self.auth_cache[ip]['transport']
+            community = self.auth_cache[ip]['community']
+        else:
+            community = device_data.get('community', 'public')
+            try:
+                transport = await UdpTransportTarget.create((ip, self.port), timeout=self.timeout, retries=self.retries)
+            except Exception:
+                return None
+        
         try:
-            transport = await UdpTransportTarget.create((ip, self.port), timeout=self.timeout)
             errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
                 self.engine,
                 CommunityData(community, mpModel=1),
@@ -199,3 +178,11 @@ class AsyncSNMPPoller:
         except Exception as e:
             print(f"[!] Błąd pobierania metryk z {ip}: {e}")
         return None
+
+    def _identify_vendor(self, description):
+        """Fingerprinting urządzenia na podstawie sysDescr."""
+        desc_lower = description.lower()
+        for key, name in VENDOR_MAP.items():
+            if key.lower() in desc_lower:
+                return name
+        return "Generic/Unknown"

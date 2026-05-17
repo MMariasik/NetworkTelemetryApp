@@ -43,9 +43,6 @@ async def start_app():
     print("[*] Rozpoczynam jednorazowe skanowanie sieci...")
     raw_hosts = SubnetScanner.scanForDevices(interface_SNMP) # ARP Scan
     print(f"[*] Zakończono skanowanie sieci. Znaleziono {len(raw_hosts)} urządzeń.")
-    print("znalezione urządzenia:")
-    for host in raw_hosts:
-        print(f"  - {host['ip']}")
 
     # Równoległe sprawdzanie SNMP dla wszystkich znalezionych po ARP
     discovery_tasks = [poller.get_device_identity(host['ip']) for host in raw_hosts]
@@ -58,10 +55,19 @@ async def start_app():
         monitored_devices[data['ip']] = data
         if data['status'] == 'up':
             print(f"[+] Dodano do monitoringu: {data['ip']} [{data['vendor']}]")
+        else:
+            print(f"[-] Urządzenie {data['ip']} jest niedostępne (status: {data['status']})")
 
     while True:
         print("test3")
-        await asyncio.sleep(10) # Interwał odpytywania
+        await asyncio.sleep(30) # Interwał odpytywania
+        for data in discovered_data:
+            data = monitored_devices[data['ip']]
+            metrics = await poller.get_device_metrics(data)
+            if metrics:
+                print(f"  - Metryki dla {data['ip']}: {metrics}")
+            else:
+                print(f"  - Nie można pobrać metryk dla {data['ip']}")
 
 if __name__ == "__main__":
     try:
