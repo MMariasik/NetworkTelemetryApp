@@ -52,8 +52,8 @@ async def start_app():
         print(f"  - {data}")
 
     for data in discovered_data:
-        monitored_devices[data['ip']] = data
         if data['status'] == 'up':
+            monitored_devices[data['ip']] = data
             print(f"[+] Dodano do monitoringu: {data['ip']} [{data['vendor']}]")
         else:
             print(f"[-] Urządzenie {data['ip']} jest niedostępne (status: {data['status']})")
@@ -61,8 +61,7 @@ async def start_app():
     while True:
         print("test3")
         await asyncio.sleep(30) # Interwał odpytywania
-        for data in discovered_data:
-            data = monitored_devices[data['ip']]
+        for data in monitored_devices.values():
             metrics = await poller.get_device_metrics(data)
             if metrics:
                 print(f"  - Metryki dla {data['ip']}: {metrics}")

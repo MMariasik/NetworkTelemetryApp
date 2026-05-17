@@ -134,6 +134,16 @@ class AsyncSNMPPoller:
             pass
         return None
 
+    def _identify_vendor(self, description):
+        """Fingerprinting urządzenia na podstawie sysDescr."""
+        desc_lower = description.lower()
+        for key, name in VENDOR_MAP.items():
+            if key.lower() in desc_lower:
+                return name
+        return "Generic/Unknown"
+
+    #------------------------------------------------------------------------------------
+
     async def get_device_metrics(self, device_data):
         """Pobiera metryki wydajnościowe na podstawie zidentyfikowanego dostawcy."""
         if not device_data or device_data.get('status') != 'up':
@@ -178,11 +188,3 @@ class AsyncSNMPPoller:
         except Exception as e:
             print(f"[!] Błąd pobierania metryk z {ip}: {e}")
         return None
-
-    def _identify_vendor(self, description):
-        """Fingerprinting urządzenia na podstawie sysDescr."""
-        desc_lower = description.lower()
-        for key, name in VENDOR_MAP.items():
-            if key.lower() in desc_lower:
-                return name
-        return "Generic/Unknown"
