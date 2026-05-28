@@ -30,6 +30,8 @@ class PollerManager:
 
         for ip, metrics in zip(monitored_devices.keys(), metrics_results):
             if metrics:
-                print(f"  - Metryki dla {ip}: {metrics}")
+                print(f"  - Metryki dla {ip}:")
+                for metric_name, metric_value in metrics.items():
+                    print(f"    - {metric_name}: {metric_value}")
             else:
                 print(f"  - Nie można pobrać metryk dla {ip}")

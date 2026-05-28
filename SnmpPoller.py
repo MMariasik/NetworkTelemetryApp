@@ -24,9 +24,50 @@ OIDS = {
     # --- WYDAJNOŚĆ (Pobierane często) ---
     "performance": {
         "Cisco IOS/Nexus": {
-            "cpu_5min": "1.3.6.1.4.1.9.9.109.1.1.1.1.5.1", # CPU średnia z 5 minut
-            "ram_used": "1.3.6.1.4.1.9.9.48.1.1.1.5.1",    # Pamięć zajęta (Pool: Processor)
-            "ram_free": "1.3.6.1.4.1.9.9.48.1.1.1.6.1"     # Pamięć wolna
+            # Zasoby ogólne (Zazwyczaj wymagają indeksu instancji .1 na końcu)
+            "cpu_5sec": "1.3.6.1.4.1.9.9.109.1.1.1.1.3.1",    # Użycie CPU z ostatnich 5 sekund (%)
+            "cpu_1min": "1.3.6.1.4.1.9.9.109.1.1.1.1.4.1",    # Użycie CPU z ostatniej minuty (%)
+            "cpu_5min": "1.3.6.1.4.1.9.9.109.1.1.1.1.5.1",    # Użycie CPU z ostatnich 5 minut (%)
+            "ram_used": "1.3.6.1.4.1.9.9.109.1.1.1.1.12.1",   # Pamięć RAM wykorzystana (Bajty)
+            "ram_free": "1.3.6.1.4.1.9.9.109.1.1.1.1.13.1",   # Pamięć RAM wolna (Bajty)
+            
+            # Pamięci puli I/O (Kluczowe przy anomaliach i pps burstach)
+            "mem_pool_processor_used": "1.3.6.1.4.1.9.9.48.1.1.1.5.1", # RAM procesora
+            "mem_pool_io_used": "1.3.6.1.4.1.9.9.48.1.1.1.5.2",        # RAM dla buforowania pakietów I/O
+            
+            # Środowiskowe / Hardware
+            "temperature": "1.3.6.1.4.1.9.9.13.1.3.1.3",      # Temperatura sensora w st. Celsjusza (Tabela)
+            "fan_state": "1.3.6.1.4.1.9.9.13.1.4.1.3",        # Status wentylatora: 1=normal, 3=critical
+            "power_supply_state": "1.3.6.1.4.1.9.9.13.1.5.1.3", # Status zasilacza
+            "tcam_usage_pct": "1.3.6.1.4.1.9.9.845.1.1.1.1.3", # Procentowe zużycie sprzętowego TCAM (L3 Switche)
+            
+            # Stacking / Praca w stosie (Wymagają WALK)
+            "stack_switch_role": "1.3.6.1.4.1.9.9.500.1.2.1.1.3", # Rola: 1=master, 2=member
+            "stack_switch_state": "1.3.6.1.4.1.9.9.500.1.2.1.1.6", # Stan: 1=ready, inne to awaria
+            "stack_port_status": "1.3.6.1.4.1.9.9.500.1.2.2.1.1",  # Status portów stacku z tyłu: 1=up, 2=down
+            
+            # Power over Ethernet (PoE)
+            "poe_total_power": "1.3.6.1.2.1.105.1.3.1.1.2",       # Całkowity budżet PoE zasilacza (W)
+            "poe_consumed_power": "1.3.6.1.2.1.105.1.3.1.1.3",    # Aktualnie pobierana moc PoE (W)
+            "poe_port_status": "1.3.6.1.2.1.105.1.1.1.3",         # Status portu: 3=deliveringPower, 4=fault (Tabela)
+            
+            # Routing i Płaszczyzna Sterowania (Control Plane - Tabela)
+            "bgp_peer_state": "1.3.6.1.2.1.15.3.1.2",             # Stan sesji BGP: 6=established (Tabela)
+            "bgp_peer_uptime": "1.3.6.1.2.1.15.3.1.24",           # Uptime sesji BGP w sekundach
+            "ospf_neighbor_state": "1.3.6.1.2.1.14.10.1.6",       # Stan sąsiada OSPF: 8=full (Tabela)
+            "ospf_neighbor_events": "1.3.6.1.2.1.14.10.1.11",     # Licznik zmian stanu sąsiedztwa (Flapping detekcja)
+            
+            # Bezpieczeństwo, NAT i VPN (Kluczowe dla IDS)
+            "nat_active_translations": "1.3.6.1.4.1.9.10.77.1.1.1.0", # Aktualna liczba wpisów w tabeli NAT
+            "nat_failed_translations": "1.3.6.1.4.1.9.10.77.1.1.3.0", # Licznik odrzuconych translacji (Przepełnienie/DDoS)
+            "vpn_active_tunnels_ipsec": "1.3.6.1.4.1.9.9.171.1.2.1.1", # Liczba aktywnych tuneli Site-to-Site
+            "vpn_failed_tunnels_global": "1.3.6.1.4.1.9.9.171.1.3.1.1", # Nieudane negocjacje IPsec (Brute-force / Skanowanie)
+            "vpn_in_dropped_packets": "1.3.6.1.4.1.9.9.171.1.2.1.17",  # Pakiety odrzucone na wejściu do tunelu Crypto
+            
+            # Jakość Łącza i Polityki Ruchu
+            "ip_sla_latest_rtt": "1.3.6.1.4.1.9.9.42.1.2.10.1.1",    # Wynik opóźnienia IP SLA Ping/Jitter (ms)
+            "ip_sla_status": "1.3.6.1.4.1.9.9.42.1.2.10.1.2",        # Status testu: 1=ok, 3=timeout
+            "qos_drop_bytes": "1.3.6.1.4.1.9.9.166.1.15.1.1.11"      # Bajty odrzucone przez restrykcje QoS (Tabela)
         },
         "Linux/Unix Server": {
             "cpu_load_1m": "1.3.6.1.4.1.2021.10.1.3.1",    # Load average (1 min)

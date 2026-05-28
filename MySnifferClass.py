@@ -52,7 +52,7 @@ class MySniffer:
             # raw() zamienia payload na obiekt typu bytes
             payload = raw(packet[IP].payload)
 
-        self.save_to_db(src_mac, dst_mac, src_ip, dst_ip, protocol, src_port, dst_port, packet_size, payload, packet.time)
+        #self.save_to_db(src_mac, dst_mac, src_ip, dst_ip, protocol, src_port, dst_port, packet_size, payload, packet.time)
 
     def save_to_db(self, src_mac, dst_mac, src_ip, dst_ip, protocol, src_port, dst_port, packet_size, payload, timestamp):
         values = (timestamp, src_mac, dst_mac, src_ip, dst_ip, protocol, src_port, dst_port, packet_size, payload)
