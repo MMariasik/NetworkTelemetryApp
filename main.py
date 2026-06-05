@@ -6,7 +6,8 @@ import MySnifferClass
 import SubnetScanner
 from PollerManager import PollerManager
 from SnmpPoller import AsyncSNMPPoller
-from db_tools import connect_to_db
+
+#from db_tools import connect_to_db
 
 monitored_devices = {}
 
@@ -37,7 +38,9 @@ def getInterfaceFromUser():
 
 
 async def start_app():
-    db, cursor = connect_to_db()
+    #db, cursor = connect_to_db()
+    db = None
+    cursor = None
 
     interface_SNMP, interface_PM = getInterfaceFromUser()
     
@@ -50,8 +53,9 @@ async def start_app():
     # pętla główna programu
     while True:
         print("test3")
-        await asyncio.sleep(30) # Interwał odpytywania
         await PollerManager().poll_metrics(poller)
+        await asyncio.sleep(30) # Interwał odpytywania
+
 
 if __name__ == "__main__":
     try:

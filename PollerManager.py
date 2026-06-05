@@ -14,6 +14,7 @@ class PollerManager:
             if data['status'] == 'up':
                 monitored_devices[data['ip']] = data
                 print(f"[+] Dodano do monitoringu: {data['ip']} [{data['vendor']}]")
+                # zapis do bazy danych
             else:
                 print(f"[-] Urządzenie {data['ip']} jest niedostępne (status: {data['status']})")
 
@@ -33,5 +34,6 @@ class PollerManager:
                 print(f"  - Metryki dla {ip}:")
                 for metric_name, metric_value in metrics.items():
                     print(f"    - {metric_name}: {metric_value}")
+                    # zapis do bazy danych
             else:
                 print(f"  - Nie można pobrać metryk dla {ip}")
