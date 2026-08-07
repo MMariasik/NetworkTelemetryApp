@@ -4,6 +4,6 @@ A part of the project for studies, which is aimed at querying devices in the net
 
 Currently work is moved under my friends repository: https://github.com/251181/NetPulse/tree/develop
 
-I am responsible for everything that's inside workers/ repository
+I am responsible for everything that's inside workers/ directory
 
 When we will be done, I'll put my part here
