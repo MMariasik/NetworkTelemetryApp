@@ -1,6 +1,6 @@
 # NetworkTelemetryApp #
 
-NetworkTelemetryApp is a standalone Network Intrusion Detection and Response System (NIDRS) specifically designed to protect local networks from compromised Internet of Things (IoT) devices. Originally developed as an anomaly detection component for a broader monitoring project (<ins>https://github.com/251181/NetPulse/tree/develop</ins> ), it has evolved into a fully independent system capable of not only detecting threats but actively responding to them.
+NetworkTelemetryApp is a standalone Network Intrusion Detection and Response System (NIDRS) specifically designed to protect local networks from compromised Internet of Things (IoT) devices. Originally developed as an anomaly detection component for a broader monitoring project, it has evolved into a fully independent system capable of not only detecting threats but actively responding to them.
 
 ## Overview ##
 The application serves as a dedicated security layer for modern smart environments. Its primary goal is to continuously monitor network traffic, identify IoT devices that have been attacked or infected (e.g., recruited into botnets), and automatically isolate them from the rest of the network.
@@ -25,16 +25,16 @@ By shifting from a passive IDS to an active NIDRS, NetworkTelemetryApp ensures t
 **Automated Quarantine** — Actively respond to detected threats by isolating compromised devices, preventing further network infection and lateral movement.
 
 ## Project Evolution ##
-This project originated as the core detection engine for a larger network monitoring tool (NetPulse). It has since been extracted and rebuilt into a fully independent NIDRS, shifting its focus from general network anomaly detection to targeted IoT threat response and mitigation.
+This project originated as the core detection engine for a larger network monitoring tool (NetPulse - <ins>https://github.com/251181/NetPulse/tree/develop</ins> ). It has since been extracted and rebuilt into a fully independent NIDRS, shifting its focus from general network anomaly detection to targeted IoT threat response and mitigation.
 
-## Future Development ##
-I am actively developing this project as part of my bachelor's engineering thesis. The upcoming milestones focus on expanding the NIDRS capabilities, specifically:
+## Future Development##
+I am actively developing this project as part of my **bachelor's engineering thesis**. The upcoming milestones are focused on transforming the engine into a fully operational and responsive NIDRS, validated within a rigorous testing environment:
 
-    Refining automated network quarantine mechanisms.
-
-    Improving behavioral profiling for a wider range of IoT devices.
-
-    Minimizing false positives during threat identification and isolation.
+- **Hybrid Network Environment:** Deploying the system within a GNS3 topology featuring strict VLAN segmentation (Management, Clients, IoT) and SPAN port mirroring for passive traffic replication.
+- **Asynchronous Persistence Layer:** Implementing an `aiosqlite` database module to ensure that logging anomalies and maintaining device inventory do not bottleneck the main `scapy` packet processing threads.
+- **Advanced Detection & Telemetry:** Enhancing the IDS engine with multiprocessing capabilities and integrating SNMP telemetry to cross-reference network anomalies with hardware metrics (CPU/RAM).
+- **L3/L4 Automated Quarantine:** Developing active response mechanisms to dynamically isolate compromised devices (DROP) at the network edge using API calls (e.g., OPNsense) or direct `nftables` rule injections.
+- **Attack Simulation & Validation:** Measuring system reliability and decision latency against simulated Linux-based attack vectors, including ARP Spoofing, Xmas Scans, and SYN Floods.
 
 ## Disclaimer ##
 This application is developed for educational and research purposes. Only use it to scan, monitor, and quarantine devices on networks you own or have explicit permission to secure.
