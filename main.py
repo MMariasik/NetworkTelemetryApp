@@ -4,12 +4,13 @@ import asyncio
 import multiprocessing
 import ipaddress
 
-from workers.MySnifferClass import MySniffer
-from workers.SubnetScanner import scanForDevices
-from workers.PollerManager import PollerManager
-from workers.SnmpPoller import AsyncSNMPPoller
-from workers.packetAnalyzer import MyAnalyzer
-from workers.snmp_analyzer import SNMPTelemetryAnalyzer
+from MySnifferClass import MySniffer
+from SubnetScanner import scanForDevices
+from PollerManager import PollerManager
+from SnmpPoller import AsyncSNMPPoller
+from packetAnalyzer import MyAnalyzer
+from snmp_analyzer import SNMPTelemetryAnalyzer
+from db_tools_async import init_db
 
     # Run with sudo!
 
@@ -20,7 +21,7 @@ def getInterfaceFromUser():
 
     print("Provide network interface for SNMP ", end="")
     while(True):
-        interface_SNMP = input("[enp45s0]: ") or "enp45s0"
+        interface_SNMP = input("[tap0]: ") or "tap0"
         if interface_SNMP not in get_if_list():
             print(f"Error: Interface \"{interface_SNMP}\" does not exist, try again: ", end="")
         else:
@@ -28,7 +29,7 @@ def getInterfaceFromUser():
 
     print("Provide network interface for Port Mirroring ", end="")
     while(True):
-        interface_PM = input("[enp45s0]: ") or "enp45s0"
+        interface_PM = input("[tap1]: ") or "tap1"
         if interface_PM not in get_if_list():
             print(f"Error: Interface \"{interface_PM}\" does not exist, try again: ", end="")
         else:
@@ -37,6 +38,19 @@ def getInterfaceFromUser():
     return interface_SNMP, interface_PM
 
 async def start_app():
+
+
+    print("\nWELCOME TO NTA - YOUR ACTIVE NETWORK MONITORING SOLUTION\n")
+    print("""    ███╗   ██╗████████╗ █████╗               ███╗   ██╗██╗██████╗ ██████╗ ███████╗
+    ████╗  ██║╚══██╔══╝██╔══██╗              ████╗  ██║██║██╔══██╗██╔══██╗██╔════╝
+    ██╔██╗ ██║   ██║   ███████║    █████╗    ██╔██╗ ██║██║██║  ██║██████╔╝███████╗
+    ██║╚██╗██║   ██║   ██╔══██║    ╚════╝    ██║╚██╗██║██║██║  ██║██╔══██╗╚════██║
+    ██║ ╚████║   ██║   ██║  ██║              ██║ ╚████║██║██████╔╝██║  ██║███████║
+    ╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝              ╚═╝  ╚═══╝╚═╝╚═════╝ ╚═╝  ╚═╝╚══════╝
+                                                                              """)
+
+    await init_db()
+
     interface_SNMP, interface_PM = getInterfaceFromUser()
     
     shared_queue = multiprocessing.Queue()
@@ -47,15 +61,14 @@ async def start_app():
     poller = AsyncSNMPPoller()
     snmp_analyzer = SNMPTelemetryAnalyzer()
 
-    raw_hosts = [{'test': {'ip': '192.168.1.100'}}]
+    raw_hosts = [{'test': {'ip': '1.1.1.1'}}]
 
-    await PollerManager().load_lookup_table("workers/devices.json")
+    await PollerManager().load_lookup_table("devices.json")
 
     k = 0
     reset_k = 6
     pool_cooldown = 10
 
-    print("WELCOME TO NETPULSE - YOUR NETWORK MONITORING SOLUTION")
     while True:
         print("Updating monitored devices and polling SNMP metrics...")
         if k % reset_k == 0:
@@ -82,4 +95,7 @@ def main():
     try:
         asyncio.run(start_app())
     except KeyboardInterrupt:
-        print("\nZamykanie NetPulse...")
+        print("\nZamykanie NTA...")
+
+if __name__ == "__main__":
+    main()

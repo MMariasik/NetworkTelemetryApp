@@ -2,8 +2,8 @@ import asyncio
 import json
 import aiofiles
 
-from db_tools.db_tools import store_device, build_metrics, store_metrics
-from core.event_bus import push_event
+from db_tools_async import store_device_async
+from db_tools_async import store_metrics_async
 
 monitored_devices = {}
 
@@ -46,10 +46,10 @@ class PollerManager:
 
                 monitored_devices[data['ip']] = data
                 print(f"[+] Dodano do monitoringu: {data['ip']} [{data['vendor']}]")
-                store_device(ip=data["ip"], general_info=data)
+                store_device_async(ip=data["ip"], general_info=data)
             else:
                 print(f"[-] Urządzenie {data['ip']} jest niedostępne (status: {data['status']})")
-                store_device(ip=data["ip"], general_info={"status": data['status']})
+                store_device_async(ip=data["ip"], general_info={"status": data['status']})
 
         return monitored_devices
 
@@ -66,7 +66,7 @@ class PollerManager:
 
         for ip, result in zip(monitored_devices.keys(), metrics_results):
             if result:
-                store_device(ip=ip, performance=result.get("performance"), interfaces=result.get("interfaces"))
+                await store_device_async(ip=ip, performance=result.get("performance"), interfaces=result.get("interfaces"))
 
                 metrics = build_metrics(
                     ip=ip,
@@ -74,7 +74,7 @@ class PollerManager:
                     interfaces=result.get("interfaces")
                 )
 
-                store_metrics(metrics)
+                await store_metrics_async(metrics)
                 
                 
                 '''
@@ -115,7 +115,6 @@ class PollerManager:
             else:
                 print(f"  - Nie można pobrać metryk dla {ip}") # TODO dodanie do bazy jako hosty z samym IP
                 
-        push_event({'type': 'DATA_REFRESH_SIGNAL'})
         
         if analysis_tasks:
             await asyncio.gather(*analysis_tasks, return_exceptions=True)

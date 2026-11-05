@@ -1,0 +1,7 @@
+__pycache__/
+.vscode/
+venv/
+NTA/
+*.db
+*.db-shm
+*.db-wal

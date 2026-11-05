@@ -2,8 +2,7 @@ import asyncio
 import logging
 from datetime import datetime
 from collections import defaultdict
-from core.event_bus import push_event
-from db_tools.db_tools import store_log_async
+from db_tools_async import store_log_async
 
 logging.basicConfig(
     level=logging.INFO, 
@@ -75,7 +74,6 @@ class SNMPTelemetryAnalyzer:
                                 f"This may indicate that someone is scanning the device for open ports."
                             )
                         }
-                        push_event(event.copy())
 
                         try:
                             await store_log_async(event.copy())
@@ -101,7 +99,6 @@ class SNMPTelemetryAnalyzer:
                             f"This may indicate a resource exhaustion attack or a malfunctioning application."
                         )
                     }
-                    push_event(event.copy())
 
                     try:
                         await store_log_async(event.copy())
@@ -138,7 +135,6 @@ class SNMPTelemetryAnalyzer:
                             f"This may indicate a resource exhaustion attack or a malfunctioning application."
                         )
                     }
-                    push_event(event.copy())
 
                     try:
                         await store_log_async(event.copy())
@@ -174,7 +170,6 @@ class SNMPTelemetryAnalyzer:
                             f"This may affect network stability and cause delays or packet loss."
                         )
                     }
-                    push_event(event.copy())
 
                     try:
                         await store_log_async(event.copy())
@@ -206,7 +201,6 @@ class SNMPTelemetryAnalyzer:
                                 f"This may indicate a memory leak or abnormal process behavior."
                             )
                         }
-                        push_event(event.copy())
 
                         try:
                             await store_log_async(event.copy())
@@ -251,7 +245,6 @@ class SNMPTelemetryAnalyzer:
                                 f"This may cause temporary network interruptions or instability."
                             )
                         }
-                        push_event(event.copy())
 
                         try:
                             await store_log_async(event.copy())
@@ -280,7 +273,6 @@ class SNMPTelemetryAnalyzer:
                                 f"This may indicate large data transfer or possible unauthorized data movement."
                             )
                         }
-                        push_event(event.copy())
 
                         try:
                             await store_log_async(event.copy())

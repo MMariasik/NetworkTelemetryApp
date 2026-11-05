@@ -2,8 +2,7 @@ import asyncio
 import multiprocessing
 import logging
 from collections import defaultdict, deque
-from core.event_bus import push_event
-from db_tools.db_tools import store_log_async
+from db_tools_async import store_log_async
 from datetime import datetime
 import time
 import ipaddress
@@ -77,8 +76,6 @@ class MyAnalyzer:
                     )
                 }
 
-                push_event(event.copy())
-
                 try:
                     await store_log_async(event.copy())
                 except Exception:
@@ -102,8 +99,6 @@ class MyAnalyzer:
                     )
                 }
 
-                push_event(event.copy())
-
                 try:
                     await store_log_async(event.copy())
                 except Exception:
@@ -126,8 +121,6 @@ class MyAnalyzer:
                         f"in normal communication and may indicate stealth scanning or packet manipulation."
                     )
                 }
-
-                push_event(event.copy())
 
                 try:
                     await store_log_async(event.copy())
@@ -156,8 +149,6 @@ class MyAnalyzer:
                         f"over ICMP protocol instead of normal ping traffic."
                     )
                 }
-
-                push_event(event.copy())
 
                 try:
                     await store_log_async(event.copy())
@@ -188,8 +179,6 @@ class MyAnalyzer:
                             f"man-in-the-middle attempt or local network impersonation attack."
                         )
                     }
-
-                    push_event(event.copy())
 
                     try:
                         await store_log_async(event.copy())
@@ -225,8 +214,6 @@ class MyAnalyzer:
                     f"which are frequent targets for brute-force attacks and unauthorized access attempts."
                 )
             }
-
-            push_event(event.copy())
 
             try:
                 await store_log_async(event.copy())
@@ -282,8 +269,6 @@ class MovingAverageDetector:
                         f"which may represent a distributed denial-of-service attack or burst traffic event."
                     )
                 }
-
-                push_event(event.copy())
 
                 try:
                     await store_log_async(event.copy())
@@ -369,8 +354,6 @@ class StructuralAnomalyDetector:
                     )
                 }
 
-                push_event(event.copy())
-
                 try:
                     await store_log_async(event.copy())
                 except Exception:
@@ -403,8 +386,6 @@ class StructuralAnomalyDetector:
                         f"resources."
                     )
                 }
-
-                push_event(event.copy())
 
                 try:
                     await store_log_async(event.copy())
@@ -441,8 +422,6 @@ class StructuralAnomalyDetector:
                         f"or a botnet."
                     )
                 }
-
-                push_event(event.copy())
 
                 try:
                     await store_log_async(event.copy())
