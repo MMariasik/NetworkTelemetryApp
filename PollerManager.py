@@ -46,10 +46,10 @@ class PollerManager:
 
                 monitored_devices[data['ip']] = data
                 print(f"[+] Dodano do monitoringu: {data['ip']} [{data['vendor']}]")
-                store_device_async(ip=data["ip"], general_info=data)
+                await store_device_async(ip=data["ip"], general_info=data)
             else:
                 print(f"[-] Urządzenie {data['ip']} jest niedostępne (status: {data['status']})")
-                store_device_async(ip=data["ip"], general_info={"status": data['status']})
+                await store_device_async(ip=data["ip"], general_info={"status": data['status']})
 
         return monitored_devices
 
