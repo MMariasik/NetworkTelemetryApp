@@ -8,21 +8,14 @@ The application serves as a dedicated security layer for modern smart environmen
 By shifting from a passive IDS to an active NIDRS, NetworkTelemetryApp ensures that compromised endpoints are neutralized before they can cause lateral damage or communicate with malicious command-and-control servers.
 
 ## Features ##
-    **Network Scanning** — Discover devices connected to the network and gather information about them.
-
-    **Network Traffic Monitoring** — Capture and analyze network traffic to identify unusual patterns and suspicious activity.
-
-    **Anomaly Detection** — Analyze network activity to identify irregularities that may indicate potential security threats.
-
-    **Threat Identification** — Detect potentially dangerous behavior and suspicious network activity. 
-
-    **IoT Device Discovery** — Scan and identify smart devices and other endpoints connected to the network.
-
-    **Traffic Profiling** — Capture and analyze network traffic to establish baseline behaviors for specific IoT devices.
-
-    **Compromise Detection** — Identify anomalies, unauthorized outbound connections, and malicious patterns indicative of a hacked device.
-
-    **Automated Quarantine** — Actively respond to detected threats by isolating compromised devices, preventing further network infection and lateral movement.
+**Network Scanning** — Discover devices connected to the network and gather information about them.
+**Network Traffic Monitoring** — Capture and analyze network traffic to identify unusual patterns and suspicious activity.
+**Anomaly Detection** — Analyze network activity to identify irregularities that may indicate potential security threats.
+**Threat Identification** — Detect potentially dangerous behavior and suspicious network activity. 
+**IoT Device Discovery** — Scan and identify smart devices and other endpoints connected to the network.
+**Traffic Profiling** — Capture and analyze network traffic to establish baseline behaviors for specific IoT devices.
+**Compromise Detection** — Identify anomalies, unauthorized outbound connections, and malicious patterns indicative of a hacked device.
+**Automated Quarantine** — Actively respond to detected threats by isolating compromised devices, preventing further network infection and lateral movement.
 
 ## Project Evolution ##
 This project originated as the core detection engine for a larger network monitoring tool (NetPulse). It has since been extracted and rebuilt into a fully independent NIDRS, shifting its focus from general network anomaly detection to targeted IoT threat response and mitigation.
