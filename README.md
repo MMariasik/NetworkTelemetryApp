@@ -1,4 +1,4 @@
-![Alt text](/IMG/LOGO_NTA.jpeg?raw=true "LOGO")
+![Alt text](/IMG/LOGO_NTA.jpg?raw=true "LOGO")
 
 # NetworkTelemetryApp #
 
