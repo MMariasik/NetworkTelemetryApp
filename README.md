@@ -9,12 +9,19 @@ By shifting from a passive IDS to an active NIDRS, NetworkTelemetryApp ensures t
 
 ## Features ##
 **Network Scanning** — Discover devices connected to the network and gather information about them.
+
 **Network Traffic Monitoring** — Capture and analyze network traffic to identify unusual patterns and suspicious activity.
+
 **Anomaly Detection** — Analyze network activity to identify irregularities that may indicate potential security threats.
+
 **Threat Identification** — Detect potentially dangerous behavior and suspicious network activity. 
+
 **IoT Device Discovery** — Scan and identify smart devices and other endpoints connected to the network.
+
 **Traffic Profiling** — Capture and analyze network traffic to establish baseline behaviors for specific IoT devices.
+
 **Compromise Detection** — Identify anomalies, unauthorized outbound connections, and malicious patterns indicative of a hacked device.
+
 **Automated Quarantine** — Actively respond to detected threats by isolating compromised devices, preventing further network infection and lateral movement.
 
 ## Project Evolution ##
