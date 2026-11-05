@@ -1,3 +1,5 @@
+![Alt text](/IMG/LOGO_NTA.jpeg?raw=true "LOGO")
+
 # NetworkTelemetryApp #
 
 NetworkTelemetryApp is a standalone Network Intrusion Detection and Response System (NIDRS) specifically designed to protect local networks from compromised Internet of Things (IoT) devices. Originally developed as an anomaly detection component for a broader monitoring project, it has evolved into a fully independent system capable of not only detecting threats but actively responding to them.
