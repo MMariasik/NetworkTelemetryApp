@@ -23,7 +23,7 @@ class MySniffer:
         self.myIP = myIP
         self.sniffer.start()
         print(f"[SNIFFER] Nasłuchiwanie na \"{interface}\"... Trafia prosto do analizatora.")
-    
+
     def __del__(self):
         try:
             self.sniffer.stop()
@@ -43,7 +43,7 @@ class MySniffer:
             arp_op, arp_psrc, arp_hwsrc = None, None, None
             payload_len = 0
             payload_entropy = 0.0
-
+            
             # Analiza Warstwy L3 (IP)
             if packet.haslayer(IP):
                 ip_layer = packet[IP]
@@ -55,7 +55,7 @@ class MySniffer:
                 #    return
                 if ip_layer.payload:
                     payload_len = len(ip_layer.payload)
-
+                
                 # Analiza Warstwy L4 (TCP / UDP / ICMP)
                 if packet.haslayer(TCP):
                     tcp_layer = packet[TCP]
@@ -80,14 +80,14 @@ class MySniffer:
                     icmp_payload_bytes = bytes(icmp_layer.payload)
                     payload_len = len(icmp_payload_bytes)
                     payload_entropy = shannon_entropy(icmp_payload_bytes)
-
+            
             elif packet.haslayer(ARP):
                 arp_layer = packet[ARP]
                 protocol = "ARP"
                 arp_op = arp_layer.op
                 arp_psrc = arp_layer.psrc
                 arp_hwsrc = arp_layer.hwsrc
-
+            
             data = {
                 "packet_time": float(packet.time),
                 "src_mac": src_mac,
@@ -107,9 +107,9 @@ class MySniffer:
                 "payload_entropy": payload_entropy,
                 "packet_size": len(packet)
             }
-
+            
             self.analyzer_queue.put_nowait(data)
             #print(f"[SNIFFER] Złapano pakiet: {data}")
-
+        
         except Exception as e:
             print(f"[SNIFFER][ERROR] Callback padł na pakiecie: {e}")

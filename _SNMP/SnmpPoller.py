@@ -108,7 +108,7 @@ class AsyncSNMPPoller:
                     if_count = int(response.get('ifNumber', 0))
                 except ValueError:
                     if_count = 0
-
+                
                 return {
                     'ip': ip,
                     'status': 'up',
@@ -139,7 +139,7 @@ class AsyncSNMPPoller:
                 ObjectType(ObjectIdentity(OIDS["base"]["sysServices"])),
                 ObjectType(ObjectIdentity(OIDS["interfaces"]["ifNumber"])) 
             )
-
+            
             if not errorIndication and not errorStatus:
                 return {
                     'transport': transport,
@@ -201,7 +201,7 @@ class AsyncSNMPPoller:
     async def get_device_metrics(self, device_data):
         if not device_data or device_data.get('status') != 'up':
             return None
-
+        
         ip = device_data['ip']
         vendor = device_data['vendor']
         if_count = device_data.get('ifNumber', 0) 
@@ -216,13 +216,13 @@ class AsyncSNMPPoller:
                 self.auth_cache[ip] = {'community': community, 'transport': transport}
             except Exception:
                 return None
-
+        
         results = {
             'ip': ip,
             'performance': {},
             'interfaces': []
         }
-
+        
         # Pobieranie metryk systemowych (CPU/RAM)
         vendor_metrics = OIDS["performance"].get(vendor, {})
         if vendor_metrics:
@@ -241,7 +241,7 @@ class AsyncSNMPPoller:
                             results['performance'][metric_names[i]] = None
             except Exception as e:
                 print(f"[!] Błąd CPU/RAM dla {ip}: {e}")
-
+        
         # Generujemy bazowe porty (1-24) dla klasycznych routerów
         target_indices = list(range(1, min(if_count, 24) + 1))
         
@@ -250,21 +250,21 @@ class AsyncSNMPPoller:
             target_indices.extend(list(range(101, 117)))
             # Czasami VLANy managementowe lądują na wysokich indeksach (np. 5001 dla Vlan1)
             target_indices.append(5001)
-
+        
         target_indices = sorted(list(set(target_indices)))
-
+        
         '''
         # ta metoda teoretycznie może przyśpieszyć odpytywanie
         semaphore = asyncio.Semaphore(3)
-
+        
         async def sem_port_query(idx):
             async with semaphore:
                 return await self._query_single_port(transport, community, idx)
-
+        
         # Zamiast odpalać 41 zadań bez kontroli, odpalany je z limitem współbieżności semafora
         port_tasks = [sem_port_query(idx) for idx in target_indices]
         port_results = await asyncio.gather(*port_tasks, return_exceptions=True)
-
+        
         for port_res in port_results:
             if not port_res or isinstance(port_res, Exception):
                 continue
@@ -274,15 +274,15 @@ class AsyncSNMPPoller:
                 "if_number": p_idx,
                 **port_res["data"]
             })
-
+        
         return results
-
+        
         '''
         # ta metoda może być wolniejsza
         # Odpytujemy o wszystkie potencjalne porty w tym samym czasie przez pętlę asyncio!
         port_tasks = [self._query_single_port(transport, community, idx) for idx in target_indices]
         port_results = await asyncio.gather(*port_tasks, return_exceptions=True)
-
+        
         for port_res in port_results:
             # Ignorujemy błędy i puste odpowiedzi z nieaktywnych indeksów
             if not port_res or isinstance(port_res, Exception):
@@ -293,6 +293,5 @@ class AsyncSNMPPoller:
                 "if_number": p_idx,
                 **port_res["data"]
             })
-
-        return results
         
+        return results

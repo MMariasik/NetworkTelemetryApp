@@ -2,7 +2,7 @@ import aiosqlite
 import asyncio
 from datetime import datetime, timezone
 
-DB_PATH = "NTA.db"
+DB_PATH = "_DB/NTA.db"
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
@@ -60,7 +60,7 @@ async def store_device_async(ip: str, general_info: dict = None):
         now = datetime.now(timezone.utc).isoformat()
         status = general_info.get("status", "unknown") if general_info else "unknown"
         vendor = general_info.get("vendor", "Unknown") if general_info else "Unknown"
-
+        
         await db.execute("""
             INSERT INTO devices (ip, vendor, status, last_seen) 
             VALUES (?, ?, ?, ?)
@@ -78,7 +78,7 @@ async def store_log_async(event_data: dict):
                 ts_str = ts.isoformat()
             else:
                 ts_str = str(ts) if ts else datetime.utcnow().isoformat()
-
+            
             await db.execute("""
                 INSERT INTO ids_alerts (timestamp, alert_type, source, threat_level, target_ip, message)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -97,9 +97,9 @@ async def store_log_async(event_data: dict):
 async def store_full_metrics_async(ip: str, performance: dict, interfaces: list):
     if not performance and not interfaces:
         return
-
+    
     now = datetime.now(timezone.utc).isoformat()
-
+    
     try:
         async with aiosqlite.connect(DB_PATH) as db:
             if performance:
@@ -121,7 +121,7 @@ async def store_full_metrics_async(ip: str, performance: dict, interfaces: list)
                     performance.get("swap_total"), performance.get("swap_free"),
                     performance.get("total_processes"), performance.get("tcp_in_errors")
                 ))
-
+            
             if interfaces:
                 iface_records = []
                 for iface in interfaces:
@@ -137,7 +137,7 @@ async def store_full_metrics_async(ip: str, performance: dict, interfaces: list)
                         iface.get("ifInErrors"),
                         iface.get("ifOutErrors")
                     ))
-
+                
                 await db.executemany("""
                     INSERT INTO interface_metrics (
                         ip, timestamp, if_number, if_descr, oper_status,
@@ -145,7 +145,7 @@ async def store_full_metrics_async(ip: str, performance: dict, interfaces: list)
                         in_errors, out_errors
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, iface_records)
-
+            
             await db.commit()
     except Exception as e:
         print(f"[DB ERROR] Błąd masowego zapisu metryk dla {ip}: {e}")

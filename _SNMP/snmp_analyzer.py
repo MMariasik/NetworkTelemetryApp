@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import datetime
 from collections import defaultdict
-from db_tools_async import store_log_async
+from _DB.db_tools_async import store_log_async
 
 logging.basicConfig(
     level=logging.INFO, 
@@ -16,11 +16,11 @@ class SNMPTelemetryAnalyzer:
     async def analyze_metrics(self, metrics: dict):
         if not metrics or "ip" not in metrics:
             return
-
+        
         ip = metrics.get("ip")
         perf = metrics.get("performance", {})
         interfaces = metrics.get("interfaces", [])
-
+        
         await asyncio.gather(
             self._analyze_performance(ip, perf),
             self._analyze_interfaces(ip, interfaces)
@@ -29,9 +29,9 @@ class SNMPTelemetryAnalyzer:
     async def _analyze_performance(self, ip: str, perf: dict):
         if not perf:
             return
-
+        
         prev_perf = self.states[ip]["performance"]
-
+        
         # REGUŁY DETEKCJI DLA SEKTORA LINUX SERVER
         if "cpu_system" in perf and "cpu_load_1m" in perf:
             try:
@@ -46,7 +46,7 @@ class SNMPTelemetryAnalyzer:
                 ram_free = int(perf["ram_free"])
                 ram_cached = int(perf.get("ram_cached", 0))
                 ram_buffered = int(perf.get("ram_buffered", 0))
-
+                
                 # Stealth / Slow Port Scan
                 '''
                 if prev_perf and "tcp_in_errors" in prev_perf:
@@ -61,7 +61,7 @@ class SNMPTelemetryAnalyzer:
                             f"Detected +{delta_errors} rejected/bad TCP packets while CPU is IDLE ({cpu_idle}%). "
                             f"Target is being reconned by low-rate scanner (Total errors: {tcp_errors})."
                         )
-
+                        
                         event = {
                             "timestamp": datetime.utcnow(),
                             "type": "STEALTH_PORT_SCAN",
@@ -74,7 +74,7 @@ class SNMPTelemetryAnalyzer:
                                 f"This may indicate that someone is scanning the device for open ports."
                             )
                         }
-
+                        
                         try:
                             await store_log_async(event.copy())
                         except Exception:
@@ -86,7 +86,7 @@ class SNMPTelemetryAnalyzer:
                         f"[ATAK: FORK-BOMB / RESOURCE EXHAUSTION] Host: {ip} | "
                         f"Table of processes is exploding! Total processes: {total_procs}, Load Average 1m: {load_1m}."
                     )
-
+                    
                     event = {
                         "timestamp": datetime.utcnow(),
                         "type": "RESOURCE_EXHAUSTION",
@@ -99,12 +99,12 @@ class SNMPTelemetryAnalyzer:
                             f"This may indicate a resource exhaustion attack or a malfunctioning application."
                         )
                     }
-
+                    
                     try:
                         await store_log_async(event.copy())
                     except Exception:
                         logging.exception("Failed to save log")
-
+                
                 # Agresywny RAM Starvation
                 actual_used_ram = ram_total - ram_free - ram_cached - ram_buffered
                 ram_utilization_percent = (actual_used_ram / ram_total) * 100
@@ -120,7 +120,7 @@ class SNMPTelemetryAnalyzer:
                         f"Fizycznie wolny RAM: {ram_free // 1024}MB, Cache: {ram_cached // 1024}MB. "
                         f"Aktywne swapowanie na dysk: {swap_changed}."
                     )
-
+                    
                     event = {
                         "timestamp": datetime.utcnow(),
                         "type": "RESOURCE_STARVATION",
@@ -135,29 +135,29 @@ class SNMPTelemetryAnalyzer:
                             f"This may indicate a resource exhaustion attack or a malfunctioning application."
                         )
                     }
-
+                    
                     try:
                         await store_log_async(event.copy())
                     except Exception:
                         logging.exception("Failed to save log")
-
+            
             except (ValueError, TypeError, ZeroDivisionError):
                 pass
-
-
+        
+        
         # REGUŁY DETEKCJI DLA SEKTORA CISCO (ROUTER / SWITCH)
         elif "cpu_5sec" in perf:
             try:
                 cpu_5s = int(perf["cpu_5sec"])
                 mem_proc = int(perf["mem_pool_processor_used"])
-
+                
                 # --- KONKRET 1B: Cisco Control Plane Exhaustion (Skalibrowany próg) ---
                 if cpu_5s > 60:
                     logging.critical(
                         f"[ATAK: CONTROL PLANE FLOOD] Cisco: {ip} | "
                         f"Router CPU reached critical limit: {cpu_5s}%! Core routing processes are locked."
                     )
-
+                    
                     event = {
                         "timestamp": datetime.utcnow(),
                         "type": "CONTROL_PLANE_EXHAUSTION",
@@ -170,12 +170,12 @@ class SNMPTelemetryAnalyzer:
                             f"This may affect network stability and cause delays or packet loss."
                         )
                     }
-
+                    
                     try:
                         await store_log_async(event.copy())
                     except Exception:
                         logging.exception("Failed to save log")
-
+                
                 # --- KONKRET 2: Cisco Buffer Overflow / Process Memory Leak ---
                 if prev_perf and "mem_pool_processor_used" in prev_perf:
                     prev_mem_proc = int(prev_perf["mem_pool_processor_used"])
@@ -187,7 +187,7 @@ class SNMPTelemetryAnalyzer:
                             f"Processor memory pool leaked +{mem_delta / 1_000_000:.2f} MB in 10s without CPU activity! "
                             f"Suspected malicious payload causing memory allocation leak."
                         )
-
+                        
                         event = {
                             "timestamp": datetime.utcnow().isoformat() + "Z",
                             "type": "MEMORY_LEAK_SUSPECTED",
@@ -201,20 +201,20 @@ class SNMPTelemetryAnalyzer:
                                 f"This may indicate a memory leak or abnormal process behavior."
                             )
                         }
-
+                        
                         try:
                             await store_log_async(event.copy())
                         except Exception:
                             logging.exception("Failed to save log")
-
+            
             except (ValueError, TypeError):
                 pass
-
+        
         self.states[ip]["performance"] = perf
 
     async def _analyze_interfaces(self, ip: str, interfaces: list):
         current_interfaces_state = {}
-
+        
         for iface in interfaces:
             try:
                 if_num = int(iface.get("if_number"))
@@ -224,7 +224,7 @@ class SNMPTelemetryAnalyzer:
                 out_bytes = int(iface.get("ifOutOctets", 0))
                 
                 prev_iface = self.states[ip]["interfaces"].get(if_num, {})
-
+                
                 if prev_iface:
                     # ANOMALIA: Link Flapping (Sabotaż / Awaria interfejsu) ---
                     if prev_iface.get("status") != oper_status:
@@ -232,7 +232,7 @@ class SNMPTelemetryAnalyzer:
                             f"[ANOMALIA: LINK FLAPPING] Host: {ip} | "
                             f"Interface [{if_descr}] changed operational status from {prev_iface.get('status')} to {oper_status}!"
                         )
-
+                        
                         event = {
                             "timestamp": datetime.utcnow(),
                             "type": "LINK_FLAPPING",
@@ -245,22 +245,22 @@ class SNMPTelemetryAnalyzer:
                                 f"This may cause temporary network interruptions or instability."
                             )
                         }
-
+                        
                         try:
                             await store_log_async(event.copy())
                         except Exception:
                             logging.exception("Failed to save log")
-
+                    
                     prev_out_bytes = prev_iface.get("out_bytes", 0)
                     delta_out = out_bytes - prev_out_bytes
-
+                    
                     # Eksfiltracja Danych / Tunelowanie (Nienaturalny wzrost ruchu) ---
                     if delta_out > 15_000_000 and "lo" not in if_descr.lower():
                         logging.warning(
                             f"[ATAK: DATA EXFILTRATION DETECTED] Host: {ip} | "
                             f"Anomalous high outbound traffic burst on [{if_descr}]: +{delta_out / 1_000_000:.2f} MB leaving the node!"
                         )
-
+                        
                         event = {
                             "timestamp": datetime.utcnow(),
                             "type": "ANOMALOUS_OUTBOUND_TRAFFIC",
@@ -273,18 +273,18 @@ class SNMPTelemetryAnalyzer:
                                 f"This may indicate large data transfer or possible unauthorized data movement."
                             )
                         }
-
+                        
                         try:
                             await store_log_async(event.copy())
                         except Exception:
                             logging.exception("Failed to save log")
-
+                
                 current_interfaces_state[if_num] = {
                     "status": oper_status,
                     "out_bytes": out_bytes
                 }
-
+            
             except (ValueError, TypeError):
                 continue
-
+        
         self.states[ip]["interfaces"] = current_interfaces_state

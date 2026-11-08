@@ -2,7 +2,7 @@ import asyncio
 import multiprocessing
 import logging
 from collections import defaultdict, deque
-from db_tools_async import store_log_async
+from _DB.db_tools_async import store_log_async
 from datetime import datetime
 import time
 import ipaddress
@@ -11,15 +11,15 @@ import ipaddress
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [IDS ALERT] - %(message)s')
 
 class MyAnalyzer:
-    def __init__(self, analyzer_queue: multiprocessing.Queue, safe_network: ipaddress.IPv4Network):
+    def __init__(self, analyzer_queue: multiprocessing.Queue, safe_networks: ipaddress.ip_network):
         # Cache do wykrywania ARP Spoofingu: {ip: deque([mac1, mac2], maxlen=2)}
         self.arp_cache = defaultdict(lambda: deque(maxlen=2))
-
+        
         self.queue = analyzer_queue
         self.running = True
-        self.safe_network = safe_network
+        self.safe_networks = safe_networks
         self.start_loop_task = asyncio.create_task(self.start_loop())
-
+        
         self.moving_average_detector = MovingAverageDetector()
         self.structural_anomaly_detector = StructuralAnomalyDetector()
 
@@ -29,7 +29,7 @@ class MyAnalyzer:
         
         loop_task_structural = asyncio.create_task(self.structural_anomaly_detector.analysis_loop())
         loop_task_moving_avg = asyncio.create_task(self.moving_average_detector.check_anomaly())
-
+        
         try:
             # Główna pętla zbierania pakietów
             while self.running:
@@ -55,7 +55,7 @@ class MyAnalyzer:
         proto = pkt.get("protocol")
         flags = pkt.get("tcp_flags", "")
         dst_port = pkt.get("dst_port")
-
+        
         # Wykrywanie skanowania flag TCP (Xmas / Null) ---
         if proto == "TCP":
             # Xmas Scan (FIN, PSH, URG)
@@ -75,7 +75,7 @@ class MyAnalyzer:
                         f"which is commonly used for stealth port scanning and network reconnaissance."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
@@ -84,7 +84,7 @@ class MyAnalyzer:
             # 2. Null Scan Detection (Brak flag)
             elif not flags or flags == "0":
                 logging.warning(f"NULL Scan detected from {pkt['src_ip']}:{pkt['src_port']}")
-
+                
                 event = {
                     "timestamp": datetime.utcnow(),
                     "type": "TCP_NULL_SCAN",
@@ -98,7 +98,7 @@ class MyAnalyzer:
                         f"for stealth port scanning and reconnaissance of firewall rules."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
@@ -107,7 +107,7 @@ class MyAnalyzer:
             # 3. SYN-FIN Anomaly
             elif "S" in flags and "F" in flags:
                 logging.warning(f"Suspicious SYN-FIN packet from {pkt['src_ip']}")
-
+                
                 event = {
                     "timestamp": datetime.utcnow(),
                     "type": "TCP_SYN_FIN_ANOMALY",
@@ -121,12 +121,12 @@ class MyAnalyzer:
                         f"in normal communication and may indicate stealth scanning or packet manipulation."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
                     logging.exception("Failed to save log")
-
+        
         # Podejrzany rozmiar ICMP (Eksfiltracja danych / Tunelowanie) ---
         elif proto == "ICMP":
             payload_len = pkt.get("payload_len", 0)
@@ -134,7 +134,7 @@ class MyAnalyzer:
             # Standardowy ping ma mały payload. Duży rozmiar (>300B) z jednego IP to anomalia.
             if payload_len > 200 and payload_entropy > 5.5:
                 logging.warning(f"Potential ICMP Tunneling/Data Exfiltration from {pkt['src_ip']}. Payload len: {payload_len}B, Entropy: {payload_entropy}")
-        
+                
                 event = {
                     "timestamp": datetime.utcnow(),
                     "type": "ICMP_TUNNELING_SUSPECTED",
@@ -149,12 +149,12 @@ class MyAnalyzer:
                         f"over ICMP protocol instead of normal ping traffic."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
                     logging.exception("Failed to save log")
-
+        
         elif proto == "ARP":
             # ARP Spoofing Detection (Multiple MAC)
             op = pkt.get("arp_op")
@@ -165,7 +165,7 @@ class MyAnalyzer:
                 history = self.arp_cache[psrc]
                 if history and history[-1] != hwsrc:
                     logging.critical(f"ARP SPOOFING DETECTED! IP {psrc} moved from {history[-1]} to {hwsrc}")
-
+                    
                     event = {
                         "timestamp": datetime.utcnow(),
                         "type": "ARP_SPOOFING_DETECTED",
@@ -179,26 +179,26 @@ class MyAnalyzer:
                             f"man-in-the-middle attempt or local network impersonation attack."
                         )
                     }
-
+                    
                     try:
                         await store_log_async(event.copy())
                     except Exception:
                         logging.exception("Failed to save log")
-
+                
                 self.arp_cache[psrc].append(hwsrc) # zawsze zapisuj, nie tylko gdy wykryto spoofing
-
+        
         # Krytyczne Porty (Próba dostępu do wrażliwych usług) ---
         if dst_port in [21, 22, 23, 445]:  # FTP, SSH, Telnet, SMB
             try:
                 src_ip_obj = ipaddress.ip_address(pkt['src_ip'])
-                is_local = src_ip_obj in self.safe_network
+                is_local = src_ip_obj in self.safe_networks
             except ValueError:
                 # Na wypadek, gdyby src_ip był None lub błędnym adresem
                 is_local = False
-
+            
             if is_local:
                 return  # Ignorujemy ruch z lokalnej sieci
-
+            
             logging.warning(f"Suspicious access to critical port {dst_port} from {pkt['src_ip']}")
             
             event = {
@@ -214,7 +214,7 @@ class MyAnalyzer:
                     f"which are frequent targets for brute-force attacks and unauthorized access attempts."
                 )
             }
-
+            
             try:
                 await store_log_async(event.copy())
             except Exception:
@@ -241,19 +241,19 @@ class MovingAverageDetector:
         while True:
             await asyncio.sleep(1)
             now = time.time()
-
+            
             while self.long_history and self.long_history[0] < now - self.long_window_sec:
                 self.long_history.popleft()
             while self.short_history and self.short_history[0] < now - self.short_window_sec:
                 self.short_history.popleft()
-
+            
             avg_long_pps = len(self.long_history) / self.long_window_sec
             avg_short_pps = len(self.short_history) / self.short_window_sec
         
             if (not self.anti_alert_spam) and (avg_long_pps > 5 and avg_short_pps > (avg_long_pps * self.multiplier)):
                 print(f"[ALERT] Wolumetryczny DoS! Obecny PPS: {avg_short_pps:.1f} "
                       f"jest > {self.multiplier}x większy niż norma ({avg_long_pps:.1f} PPS)")
-
+                
                 event = {
                     "timestamp": datetime.utcnow(),
                     "type": "VOLUMETRIC_DDOS_DETECTED",
@@ -269,7 +269,7 @@ class MovingAverageDetector:
                         f"which may represent a distributed denial-of-service attack or burst traffic event."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
@@ -310,26 +310,26 @@ class StructuralAnomalyDetector:
             
             if self.total_packets == 0:
                 continue
-
+            
             current_syn = self.syn_count
             current_ack = self.ack_count
             current_total = self.total_packets
             current_unique = len(self.unique_src_ips)
-
+            
             self.syn_count = 0
             self.ack_count = 0
             self.total_packets = 0
             self.unique_src_ips.clear()
-
+            
             if current_ack == 0:
                 ratio = float('inf')
             else:
                 ratio = current_syn / current_ack
-
+            
             if current_syn < 150: 
                 # Ruch jest zbyt mały, by zagrażał sieci - traktujemy jako normalne falowanie
                 continue
-
+            
             # ratio jest wysokie (klasyczny, czysty flood lub "cichy" atak)
             if ratio > self.max_syn_ack_ratio and current_syn >= 150:
                 if self.SYNACK1_anti_alert_spam:
@@ -353,14 +353,14 @@ class StructuralAnomalyDetector:
                         f"resource exhaustion and denial of service."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
                     logging.exception("Failed to save log")
-
+                
                 self.SYNACK1_anti_alert_spam = 1
-
+            
             # ratio jest niskie (bo serwer daje rade odpowiadac), 
             elif current_syn > 500:
                 if self.SYNACK2_anti_alert_spam:
@@ -386,19 +386,19 @@ class StructuralAnomalyDetector:
                         f"resources."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
                     logging.exception("Failed to save log")
-
+                
                 self.SYNACK2_anti_alert_spam = 1
-
+            
             if not (ratio > self.max_syn_ack_ratio and current_syn >= 150):
                 self.SYNACK1_anti_alert_spam = 0 
             if not (current_syn > 500):
                 self.SYNACK2_anti_alert_spam = 0 
-
+            
             # Jeśli dodatkowo w strukturze bierze udział wiele unikalnych IP
             ip_dispersion_ratio = current_unique / current_total
             if ip_dispersion_ratio > self.max_unique_ip_ratio and current_total > 500:
@@ -422,12 +422,12 @@ class StructuralAnomalyDetector:
                         f"or a botnet."
                     )
                 }
-
+                
                 try:
                     await store_log_async(event.copy())
                 except Exception:
                     logging.exception("Failed to save log")
-
+                
                 self.unique_ip_anti_alert_spam = 1
             else:
                 self.unique_ip_anti_alert_spam = 0
