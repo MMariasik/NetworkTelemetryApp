@@ -22,7 +22,7 @@ By shifting from a passive IDS to an active NIDRS, NetworkTelemetryApp ensures t
 ## Project Evolution ##
 This project originated as the core detection engine for a larger network monitoring tool (NetPulse - <ins>https://github.com/251181/NetPulse/tree/develop</ins> ). It has since been extracted and rebuilt into a fully independent NIDRS, shifting its focus from general network anomaly detection to targeted IoT threat response and mitigation.
 
-## Future Development##
+## Future Development ##
 I am actively developing this project as part of my **bachelor's engineering thesis**. The upcoming milestones are focused on transforming the engine into a fully operational and responsive NIDRS, validated within a rigorous testing environment:
 
 - **Hybrid Network Environment:** Deploying the system within a GNS3 topology featuring strict VLAN segmentation (Management, Clients, IoT) and SPAN port mirroring for passive traffic replication.

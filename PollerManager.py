@@ -2,8 +2,7 @@ import asyncio
 import json
 import aiofiles
 
-from db_tools_async import store_device_async
-from db_tools_async import store_metrics_async
+from db_tools_async import store_device_async, store_full_metrics_async
 
 monitored_devices = {}
 
@@ -66,18 +65,15 @@ class PollerManager:
 
         for ip, result in zip(monitored_devices.keys(), metrics_results):
             if result:
-                await store_device_async(ip=ip, performance=result.get("performance"), interfaces=result.get("interfaces"))
+                await store_device_async(ip=ip, general_info={"status": "up"})
 
-                metrics = build_metrics(
+                await store_full_metrics_async(
                     ip=ip,
-                    performance=result.get("performance"),
-                    interfaces=result.get("interfaces")
+                    performance=result.get("performance", {}),
+                    interfaces=result.get("interfaces", [])
                 )
-
-                await store_metrics_async(metrics)
+                  
                 
-                
-                '''
                 print(f"\n=== WSZYSTKIE DANE DLA URZĄDZENIA: {ip} ===")
                 # Pobieramy statyczne dane "base", które wykryliśmy podczas Discovery
                 device_info = monitored_devices.get(ip, {})
@@ -89,12 +85,10 @@ class PollerManager:
                 # Wypisujemy interfejsy wraz z pełnymi statystykami IDS (Pakiety, Błędy, Wolumetryka)
                 print(f"[INTERFACES] (Liczba zebranych: {len(result.get('interfaces', []))}):")
                 for iface in result.get("interfaces", []):
-                    # Wyciągamy opisy i statusy
                     if_num = iface.get('if_number')
                     if_descr = iface.get('ifDescr', 'Unknown')
                     status = iface.get('ifOperStatus', 'Unknown')
                     
-                    # Wyciągamy liczniki wolumetryczne i pakietowe pod IDS
                     in_bytes = iface.get('ifInOctets', '0')
                     out_bytes = iface.get('ifOutOctets', '0')
                     in_pkts = iface.get('ifInUcastPkts', '0')
@@ -102,18 +96,17 @@ class PollerManager:
                     in_errs = iface.get('ifInErrors', '0')
                     out_errs = iface.get('ifOutErrors', '0')
                     
-                    # Formatujemy wyjście w jedną, czytelną linię per port
                     print(
                         f"    - Port {if_num} ({if_descr}) -> Status: {status} | "
                         f"Rx: {in_bytes}B ({in_pkts} pkts), Errors: {in_errs} | "
                         f"Tx: {out_bytes}B ({out_pkts} pkts), Errors: {out_errs}"
                     )
-                    '''
+                    
                 if snmp_analyzer:
                     task = asyncio.create_task(snmp_analyzer.analyze_metrics(result))
                     analysis_tasks.append(task)
             else:
-                print(f"  - Nie można pobrać metryk dla {ip}") # TODO dodanie do bazy jako hosty z samym IP
+                await store_device_async(ip=ip, general_info={"status": "down"})
                 
         
         if analysis_tasks:
