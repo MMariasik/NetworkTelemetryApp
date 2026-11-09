@@ -1,37 +1,27 @@
 from scapy.all import ARP, Ether, srp
-import ipaddress
 
-def scanForDevices(interface: str, subnets: list) -> list:
-    print(f"[*] Rozpoczynam skanowanie dla {len(subnets)} zdefiniowanych podsieci...")
+def scanForDevices(interface_map: dict) -> list:
+    print(f"[*] Rozpoczynam wielowątkowe skanowanie ARP na {len(interface_map)} podinterfejsach...")
     clients = []
-    scanned_networks = set()
     
-    for network in subnets:
-        # Konwersja binarnego obiektu ipaddress na ciąg znaków CIDR wymagany przez Scapy
-        network_cidr = str(network)
+    for iface, target_cidr in interface_map.items():
+        print(f"[*] Skanowanie sieci {target_cidr} przez natywny interfejs {iface}...")
         
-        if network_cidr not in scanned_networks:
-            print(f"[*] Wykrywanie hostów w podsieci: {network_cidr} przez interfejs {interface}")
-            clients.extend(ARPscan(interface, network_cidr))
-            scanned_networks.add(network_cidr)
+        arp = ARP(pdst=target_cidr)
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        packet = ether / arp
+        
+        result = srp(packet, timeout=2, verbose=0, iface=iface)[0]
+        
+        for sent, received in result:
+            clients.append({'ip': received.psrc, 'mac': received.hwsrc})
     
     unique_clients = {client['ip']: client for client in clients}.values()
     
-    print(f"[*] Zakończono skanowanie. Znaleziono {len(unique_clients)} unikalnych urządzeń.")
+    print(f"[*] Zakończono skanowanie. Znaleziono {len(unique_clients)} unikalnych urządzeń (L2).")
     return list(unique_clients)
 
-def ARPscan(interface: str, target_cidr: str) -> list:
-    arp = ARP(pdst=target_cidr)
-    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
-    packet = ether / arp
-    
-    result = srp(packet, timeout=3, verbose=0, iface=interface)[0]
-    
-    clients = []
-    for sent, received in result:
-        clients.append({'ip': received.psrc, 'mac': received.hwsrc})
-    
-    return clients
+
 
 def printDevices(devices: list):
     print("Available devices in the network:")

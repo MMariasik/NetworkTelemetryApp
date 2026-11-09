@@ -9,7 +9,7 @@ from _SNMP.SnmpPoller import AsyncSNMPPoller
 from _NetTrafic.packetAnalyzer import MyAnalyzer
 from _SNMP.snmp_analyzer import SNMPTelemetryAnalyzer
 from _DB.db_tools_async import init_db
-from startup_config import TRUSTED_SUBNETS
+from startup_config import VLAN_INTERFACES
 
     # Run with sudo!
 
@@ -36,6 +36,24 @@ def getInterfacesFromUser():
     
     return interface_SNMP, interface_PM
 
+async def getNewHosts(interface_SNMP):
+    new_raw_hosts = await asyncio.to_thread(scanForDevices, VLAN_INTERFACES)
+    
+    mgmt_ip_prefix = ".".join(get_if_addr(interface_SNMP).split(".")[:3]) + "."
+    
+    deduplicated_hosts = {}
+    for host in new_raw_hosts:
+        mac = host['mac']
+        ip = host['ip']
+        
+        if mac not in deduplicated_hosts:
+            deduplicated_hosts[mac] = host
+        else:
+            if ip.startswith(mgmt_ip_prefix):
+                deduplicated_hosts[mac] = host
+                
+    return list(deduplicated_hosts.values()) 
+
 def printBanner():
     print("\nWELCOME TO NTA - YOUR ACTIVE NETWORK MONITORING SOLUTION\n")
     print("""    ███╗   ██╗████████╗ █████╗               ███╗   ██╗██╗██████╗ ██████╗ ███████╗
@@ -54,7 +72,7 @@ async def start_app():
     interface_SNMP, interface_PM = getInterfacesFromUser()
     
     mySniffer = MySniffer(interface_PM, shared_queue, myIP=get_if_addr(interface_SNMP))
-    analyzer = MyAnalyzer(shared_queue, safe_networks=TRUSTED_SUBNETS.keys())
+    analyzer = MyAnalyzer(shared_queue, safe_networks=VLAN_INTERFACES.values())
     
     poller = AsyncSNMPPoller()
     snmp_analyzer = SNMPTelemetryAnalyzer()
@@ -69,7 +87,7 @@ async def start_app():
         print("Updating monitored devices and polling SNMP metrics...")
         if k % reset_k == 0:
             print("[*] Ponowne skanowanie sieci...")
-            new_raw_hosts = await asyncio.to_thread(scanForDevices, interface_SNMP, TRUSTED_SUBNETS)
+            new_raw_hosts = await getNewHosts(interface_SNMP=interface_SNMP)
             
             added = [h for h in new_raw_hosts if h not in raw_hosts]
             removed = [h for h in raw_hosts if h not in new_raw_hosts]
