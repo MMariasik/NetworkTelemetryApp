@@ -24,7 +24,7 @@ class MyAnalyzer:
         self.structural_anomaly_detector = StructuralAnomalyDetector()
 
     async def start_loop(self):
-        print("[PACKET ANALYZER] Uruchomiono asynchroniczny analizator anomalii.")
+        print("[PACKET ANALYZER] Asynchronous anomaly analyzer started")
         logging.warning(f"Analyzer started, waiting for packets...")
         
         loop_task_structural = asyncio.create_task(self.structural_anomaly_detector.analysis_loop())
@@ -40,10 +40,10 @@ class MyAnalyzer:
                     logging.exception(f"Error processing packet: {packet_data}")
                     
         except asyncio.CancelledError:
-            logging.info("Główna pętla analizatora została zatrzymana.")
+            logging.info("The main analyzer loop has been stopped")
             
         finally:
-            print("[PACKET ANALYZER] Zamykanie zadań detekcji anomalii...")
+            print("[PACKET ANALYZER] Closing anomaly detection tasks")
             loop_task_structural.cancel()
             loop_task_moving_avg.cancel()
             
@@ -251,8 +251,8 @@ class MovingAverageDetector:
             avg_short_pps = len(self.short_history) / self.short_window_sec
         
             if (not self.anti_alert_spam) and (avg_long_pps > 5 and avg_short_pps > (avg_long_pps * self.multiplier)):
-                print(f"[ALERT] Wolumetryczny DoS! Obecny PPS: {avg_short_pps:.1f} "
-                      f"jest > {self.multiplier}x większy niż norma ({avg_long_pps:.1f} PPS)")
+                print(f"[ALERT] Volumetric DoS! Current PPS: {avg_short_pps:.1f} "
+                      f"is > {self.multiplier}x greater than the norm ({avg_long_pps:.1f} PPS)")
                 
                 event = {
                     "timestamp": datetime.utcnow(),
@@ -334,7 +334,7 @@ class StructuralAnomalyDetector:
             if ratio > self.max_syn_ack_ratio and current_syn >= 150:
                 if self.SYNACK1_anti_alert_spam:
                     continue
-                print(f"[ALERT] Wykryto DoS typu SYN Flood (Asymetria flag serwer nie wyrabia)! SYN/ACK Ratio = {ratio:.2f}")
+                print(f"[ALERT] SYN Flood DoS detected (Asymmetry of flags, server not responding)! SYN/ACK Ratio = {ratio:.2f}")
                 
                 event = {
                     "timestamp": datetime.utcnow(),
@@ -365,9 +365,9 @@ class StructuralAnomalyDetector:
             elif current_syn > 500:
                 if self.SYNACK2_anti_alert_spam:
                     continue
-                print(f"[ALERT] Wykryto DoS typu SYN Flood (Agresywny wolumen)! "
-                    f"Ratio w normie ({ratio:.2f}), bo serwer próbuje się bronić, "
-                    f"ale wykryto aż {current_syn} pakietów SYN w ciągu 5 sekund!")
+                print(f"[ALERT] SYN Flood DoS Detected (Aggressive Volume)! "
+                    f"Ratio is normal ({ratio:.2f}), because the server is trying to defend itself, "
+                    f"but as many as {current_syn} SYN packets were detected in 5 seconds!")
                     
                 event = {
                     "timestamp": datetime.utcnow(),
@@ -404,8 +404,8 @@ class StructuralAnomalyDetector:
             if ip_dispersion_ratio > self.max_unique_ip_ratio and current_total > 500:
                 if self.unique_ip_anti_alert_spam:
                     continue
-                print(f"[ALERT] Wykryto ROZPROSZONY DDoS! Unikalne adresy IP stanowią "
-                      f"{ip_dispersion_ratio*100:.1f}% całego ruchu (Total: {current_total} pkt).")
+                print(f"[ALERT] DISTRIBUTED DDoS detected! Unique IP addresses constitute"
+                      f"{ip_dispersion_ratio*100:.1f}% of all traffic (Total: {current_total} pkt)")
                 
                 event = {
                     "timestamp": datetime.utcnow(),

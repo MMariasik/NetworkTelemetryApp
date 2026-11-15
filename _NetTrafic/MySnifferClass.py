@@ -5,7 +5,7 @@ from collections import Counter
 from scapy.all import AsyncSniffer, IP, TCP, UDP, ICMP, ARP
 
 def shannon_entropy(data: bytes) -> float:
-    """Liczy entropię Shannona (0-8) dla bajtów payloadu. Wyższa = bardziej losowe/szyfrowane dane."""
+    """Calculates the Shannon entropy (0-8) for payload bytes. Higher = more random/encrypted data"""
     if not data:
         return 0.0
     counts = Counter(data)
@@ -22,7 +22,7 @@ class MySniffer:
         )
         self.myIP = myIP
         self.sniffer.start()
-        print(f"[SNIFFER] Nasłuchiwanie na \"{interface}\"... Trafia prosto do analizatora.")
+        print(f"[SNIFFER] Listening on \"{interface}\"... Goes straight to the analyzer")
 
     def __del__(self):
         try:
@@ -109,7 +109,7 @@ class MySniffer:
             }
             
             self.analyzer_queue.put_nowait(data)
-            #print(f"[SNIFFER] Złapano pakiet: {data}")
+            #print(f"[SNIFFER] Catched packet: {data}")
         
         except Exception as e:
-            print(f"[SNIFFER][ERROR] Callback padł na pakiecie: {e}")
+            print(f"[SNIFFER][ERROR] Callback died on packet: {e}")

@@ -1,11 +1,11 @@
 from scapy.all import ARP, Ether, srp
 
 def scanForDevices(interface_map: dict) -> list:
-    print(f"[*] Rozpoczynam wielowątkowe skanowanie ARP na {len(interface_map)} podinterfejsach...")
+    print(f"[NTA] Starting a multi-threaded ARP scan on {len(interface_map)} subinterfaces")
     clients = []
     
     for iface, target_cidr in interface_map.items():
-        print(f"[*] Skanowanie sieci {target_cidr} przez natywny interfejs {iface}...")
+        print(f"[NTA] Scanning network {target_cidr} via native interface {iface}...")
         
         arp = ARP(pdst=target_cidr)
         ether = Ether(dst="ff:ff:ff:ff:ff:ff")
@@ -18,10 +18,8 @@ def scanForDevices(interface_map: dict) -> list:
     
     unique_clients = {client['ip']: client for client in clients}.values()
     
-    print(f"[*] Zakończono skanowanie. Znaleziono {len(unique_clients)} unikalnych urządzeń (L2).")
+    print(f"[NTA] Scan completed. Found {len(unique_clients)} unique devices (L2).")
     return list(unique_clients)
-
-
 
 def printDevices(devices: list):
     print("Available devices in the network:")

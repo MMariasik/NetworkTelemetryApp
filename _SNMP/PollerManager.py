@@ -31,11 +31,11 @@ class PollerManager:
         return monitored_devices
 
     def debug_print_device_info(self, ip, result):
-        print(f"\n=== WSZYSTKIE DANE DLA URZĄDZENIA: {ip} ===")
+        print(f"\n=== ALL DEVICE METRICS: {ip} ===")
         device_info = monitored_devices.get(ip, {})
-        print(f"[BASE INFO] Nazwa: {device_info.get('sysName')}, Vendor: {device_info.get('vendor')}, Typ: {device_info.get('device_type')}")
+        print(f"[BASE INFO] Name: {device_info.get('sysName')}, Vendor: {device_info.get('vendor')}, Type: {device_info.get('device_type')}")
         print(f"[PERFORMANCE]: {result.get('performance')}")
-        print(f"[INTERFACES] (Liczba zebranych: {len(result.get('interfaces', []))}):")
+        print(f"[INTERFACES] (Collected: {len(result.get('interfaces', []))}):")
         for iface in result.get("interfaces", []):
             if_num = iface.get('if_number')
             if_descr = iface.get('ifDescr', 'Unknown')
@@ -56,9 +56,9 @@ class PollerManager:
 
     async def poll_metrics(self, poller, snmp_analyzer=None):
         if not monitored_devices:
-            print("[!] Brak urządzeń do monitorowania.")
+            print("[NTA] No monitoring devices")
             return
-        print("[*] Pobieranie metryk wydajnościowych dla monitorowanych urządzeń...")
+        print("[NTA] Downloading performance metrics for monitored devices")
         metric_tasks = [poller.get_device_metrics(data) for data in monitored_devices.values()]
         metrics_results = await asyncio.gather(*metric_tasks)
         
@@ -85,4 +85,4 @@ class PollerManager:
         if analysis_tasks:
             await asyncio.gather(*analysis_tasks, return_exceptions=True)
         
-        print("[*] Koniec pobierania metryk wydajnościowych")
+        print("[NTA] End of performance metrics download")
