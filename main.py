@@ -1,6 +1,7 @@
 from scapy.all import get_if_list, get_if_addr
 import asyncio
 import multiprocessing
+import queue
 
 from _NetTrafic.MySnifferClass import MySniffer
 from _Networks.SubnetScanner import scanForDevices
@@ -28,7 +29,7 @@ def getInterfacesFromUser():
     
     print("Provide network interface for Port Mirroring ", end="")
     while(True):
-        interface_PM = input("[tap1]: ") or "tap1"
+        interface_PM = input("[tap0.999]: ") or "tap0.999"
         if interface_PM not in get_if_list():
             print(f"Error: Interface \"{interface_PM}\" does not exist, try again: ", end="")
         else:
@@ -69,7 +70,7 @@ shared_queue = multiprocessing.Queue()
 async def start_app():
     await init_db()
     printBanner()
-    interface_SNMP, interface_PM = getInterfacesFromUser()
+    interface_SNMP, interface_PM = getInterfacesFromUser() # interface_SNMP might be deprecated soon
     
     mySniffer = MySniffer(interface_PM, shared_queue, myIP=get_if_addr(interface_SNMP))
     analyzer = MyAnalyzer(shared_queue, safe_networks=VLAN_INTERFACES.values())
@@ -83,27 +84,49 @@ async def start_app():
     reset_k = 6
     pool_cooldown = 10
     
-    while True:
-        print("Updating monitored devices and polling SNMP metrics...")
-        if k % reset_k == 0:
-            print("[*] Ponowne skanowanie sieci...")
-            new_raw_hosts = await getNewHosts(interface_SNMP=interface_SNMP)
-            
-            added = [h for h in new_raw_hosts if h not in raw_hosts]
-            removed = [h for h in raw_hosts if h not in new_raw_hosts]
-            
-            if added or removed:
-                print("[*] Zmiany w sieci wykryte, aktualizuję listę monitorowanych urządzeń...")
+    try:
+        while True:
+            print("[NTA] Updating monitored devices and polling SNMP metrics")
+            if k % reset_k == 0:
+                print("[NTA] Rescanning the network")
+                new_raw_hosts = await getNewHosts(interface_SNMP=interface_SNMP)
                 
-                print("dodane:", added)
-                print("usunięte:", removed)
+                added = [h for h in new_raw_hosts if h not in raw_hosts]
+                removed = [h for h in raw_hosts if h not in new_raw_hosts]
                 
-                raw_hosts = new_raw_hosts
-                await PollerManager().poll_devices(poller, raw_hosts)
-        
-        await PollerManager().poll_metrics(poller, snmp_analyzer)
-        await asyncio.sleep(pool_cooldown)
-        k = (k + 1) % reset_k 
+                if added or removed:
+                    print("[NTA] Network changes detected, updating list of monitored devices")
+                    
+                    print("Added:", added)
+                    print("Removed:", removed)
+                    
+                    raw_hosts = new_raw_hosts
+                    await PollerManager().poll_devices(poller, raw_hosts)
+            
+            await PollerManager().poll_metrics(poller, snmp_analyzer)
+            await asyncio.sleep(pool_cooldown)
+            k = (k + 1) % reset_k 
+    except asyncio.CancelledError:
+        print("\n[NTA] An interrupt signal was received. The asyncio loop was stopped")
+    finally:
+        print("[NTA] Graceful Shutdown has begun")
+        if 'mySniffer' in locals():
+            print("[NTA] Stopping listening on SPAN port")
+            try:
+                mySniffer.sniffer.stop()
+            except Exception:
+                pass
+                
+        print("[NTA] Flushing data exchange buffers")
+        try:
+            while True:
+                shared_queue.get_nowait()
+        except queue.Empty:
+            pass
+            
+        shared_queue.close()
+        shared_queue.join_thread()
+        print("[NTA] System resources released successfully")
 
 
 if __name__ == "__main__":
@@ -111,9 +134,4 @@ if __name__ == "__main__":
         asyncio.run(start_app())
     
     except KeyboardInterrupt:
-        print("\nZamykanie NTA...")
-        while not shared_queue.empty():
-            try:
-                shared_queue.get_nowait()
-            except shared_queue.Empty:
-                break
+        print("\nClosing NTA...")
